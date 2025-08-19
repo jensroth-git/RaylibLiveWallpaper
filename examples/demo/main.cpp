@@ -1,36 +1,33 @@
-#include <__msvc_ostream.hpp>
 #include <iostream>
 
-
-#include "RaylibDesktop.h"
+#include "desktop_integration.h"
 #include "raylib.h"
+
+using namespace DesktopIntegration;
 
 int main()
 {
 	// Initializes desktop replacement magic
-	InitRaylibDesktop();
+	Initialize();
 
 	// Sets up the desktop (-1 is the entire desktop spanning all monitors)
 	MonitorInfo monitorInfo = GetWallpaperTarget(-1);
 
 	// Initialize the raylib window.
-	InitWindow(monitorInfo.monitorWidth, monitorInfo.monitorHeight, "Raylib Desktop Demo");
+	InitWindow(monitorInfo.width, monitorInfo.height, "Raylib Desktop Demo");
 
 	// Retrieve the handle for the raylib-created window.
 	void *raylibWindowHandle = GetWindowHandle();
 
 	// Reparent the raylib window to the window behind the desktop icons.
-	RaylibDesktopReparentWindow(raylibWindowHandle);
-
-	// Configure the desktop positioning.
-	ConfigureDesktopPositioning(monitorInfo);
+	ConfigureWallpaperWindow(raylibWindowHandle, monitorInfo);
 
 	// Now, enter the raylib render loop.
 	SetTargetFPS(60);
 
 	// --- Animation variables ---
-	float circleX = monitorInfo.monitorWidth / 2.0f;
-	float circleY = monitorInfo.monitorHeight / 2.0f;
+	float circleX = monitorInfo.width / 2.0f;
+	float circleY = monitorInfo.height / 2.0f;
 	float circleRadius = 100.0f;
 	float speedX = 4.0f;
 	float speedY = 4.5f;
@@ -38,7 +35,7 @@ int main()
 	// Main render loop.
 	while (!WindowShouldClose()) {
 		// Update the mouse state of the replacement api.
-		RaylibDesktopUpdateMouseState();
+		UpdateMouseState();
 
 		// skip rendering if the wallpaper is occluded more than 95%
 		if (IsMonitorOccluded(monitorInfo, 0.95)) {
@@ -60,10 +57,10 @@ int main()
 		circleY += speedY;
 
 		// Bounce off the left/right boundaries.
-		if (circleX - circleRadius < 0 || circleX + circleRadius > monitorInfo.monitorWidth)
+		if (circleX - circleRadius < 0 || circleX + circleRadius > monitorInfo.width)
 			speedX = -speedX;
 		// Bounce off the top/bottom boundaries.
-		if (circleY - circleRadius < 0 || circleY + circleRadius > monitorInfo.monitorHeight)
+		if (circleY - circleRadius < 0 || circleY + circleRadius > monitorInfo.height)
 			speedY = -speedY;
 
 		// Begin the drawing phase.
@@ -75,14 +72,14 @@ int main()
 
 		// Attempt to display the mouse position.
 		// Note: In a wallpaper window (child of WorkerW), input may not be delivered normally.
-		int mouseX = RaylibDesktopGetMouseX();
-		int mouseY = RaylibDesktopGetMouseY();
+		int mouseX = DesktopIntegration::GetMouseX();
+		int mouseY = DesktopIntegration::GetMouseY();
 
 		// check buttons
-		if (RaylibDesktopIsMouseButtonDown(0)) {
+		if (DesktopIntegration::IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
 			DrawCircle(mouseX, mouseY, 10, BLUE);
 		}
-		else if (RaylibDesktopIsMouseButtonPressed(1)) {
+		else if (DesktopIntegration::IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) {
 			// exit on right click
 			break;
 		}
@@ -98,7 +95,7 @@ int main()
 
 	// Clean up the desktop window.
 	// Restores the original wallpaper.
-	CleanupRaylibDesktop();
+	DesktopIntegration::Cleanup();
 
 	return 0;
 }
