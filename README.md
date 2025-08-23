@@ -1,4 +1,8 @@
-### Deprecation notice: Please use LuminWallpaper instead
+# RaylibLiveWallpaper
+
+![Preview](/images/video.gif)
+
+### <span style="color:red">Deprecation notice:</span>  Please use LuminWallpaper instead
 
 This repository has been superseded by the cross‑platform Lumin – Live Wallpaper SDK. New users should start here:
 
