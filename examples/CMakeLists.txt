@@ -1,7 +1,7 @@
 set(INCLUDE_PATH "${RLP_ROOT_PATH}/include")
 
-# Find or fetch raylib
-find_package(raylib 5.0 QUIET)
+# Try to find raylib first, then fetch a specific tag for determinism
+find_package(raylib 5.5 QUIET)
 if(NOT raylib_FOUND)
   include(FetchContent)
   FetchContent_Declare(
@@ -14,66 +14,56 @@ endif()
 
 function(add_example example_name source_file)
   add_executable(${example_name} ${source_file})
-  target_link_libraries(${example_name} PRIVATE raylib RLP::RaylibLiveWallpaper)
-  target_include_directories(${example_name} PRIVATE ${RAYLIB_PATH} ${INCLUDE_PATH})
 
-  # Compiler-specific options
+  # Link: rely on transitive include paths from raylib and your library
+  target_link_libraries(${example_name} PRIVATE raylib RLP::RaylibLiveWallpaper)
+  target_include_directories(${example_name} PRIVATE ${INCLUDE_PATH})
+
   if(MSVC)
-    target_compile_definitions(${example_name} PRIVATE 
-        _CRT_SECURE_NO_WARNINGS
-        WIN32_LEAN_AND_MEAN
+    target_compile_definitions(${example_name} PRIVATE
+      _CRT_SECURE_NO_WARNINGS
+      WIN32_LEAN_AND_MEAN
     )
     target_compile_options(${example_name} PRIVATE /W3)
+
+    # Optional: make it a GUI app without console window
+    target_link_options(${example_name} PRIVATE /SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup)
   else()
     target_compile_options(${example_name} PRIVATE -Wall -Wextra)
+    # Config scoped debug flags
+    target_compile_options(${example_name} PRIVATE $<$<CONFIG:Debug>:-g -O0>)
 
-    # Add debug flags for better debugging experience
-    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-      target_compile_options(${example_name} PRIVATE -g -O0)
-    endif()
-
-    # Special flags for Objective-C++ on macOS
+    # Objective-C++ flags only if that language is enabled (Apple builds)
     if(APPLE)
-      target_compile_options(${example_name} PRIVATE 
-        $<$<COMPILE_LANGUAGE:OBJCXX>:-fobjc-arc>
-        $<$<COMPILE_LANGUAGE:OBJCXX>:-fno-objc-exceptions>
-      )
-      
-      # Ensure debug symbols for .mm files
-      if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-        target_compile_options(${example_name} PRIVATE 
-          $<$<COMPILE_LANGUAGE:OBJCXX>:-gdwarf-2>
+      get_property(has_objcxx GLOBAL PROPERTY ENABLED_LANGUAGES)
+      if("OBJCXX" IN_LIST has_objcxx)
+        target_compile_options(${example_name} PRIVATE
+          $<$<COMPILE_LANGUAGE:OBJCXX>:-fobjc-arc>
+          $<$<COMPILE_LANGUAGE:OBJCXX>:-fno-objc-exceptions>
+          $<$<AND:$<COMPILE_LANGUAGE:OBJCXX>,$<CONFIG:Debug>>:-gdwarf-2>
         )
       endif()
     endif()
   endif()
 
-  # Copy assets to the correct location for each platform if you have any
-  # add_custom_command(TARGET ${example_name} POST_BUILD
-  #   COMMAND ${CMAKE_COMMAND} -E copy_directory
-  #   ${CMAKE_CURRENT_SOURCE_DIR}/assets
-  #   ${CMAKE_BINARY_DIR}/bin/assets
-  # )
-
+  # macOS app bundle settings (optional)
   if(APPLE)
-    # For macOS app bundles, also copy assets into the app bundle Resources directory
-    # add_custom_command(TARGET ${example_name} POST_BUILD
-    #   COMMAND ${CMAKE_COMMAND} -E make_directory
-    #   ${CMAKE_BINARY_DIR}/bin/${example_name}.app/Contents/Resources
-    #   COMMAND ${CMAKE_COMMAND} -E copy_directory
-    #   ${CMAKE_CURRENT_SOURCE_DIR}/assets
-    #   ${CMAKE_BINARY_DIR}/bin/${example_name}.app/Contents/Resources
-    # )
-
     set_target_properties(${example_name} PROPERTIES
       MACOSX_BUNDLE TRUE
-      MACOSX_BUNDLE_GUI_IDENTIFIER "com.example.rayliblivewallpaper"
-      MACOSX_BUNDLE_BUNDLE_NAME "Raylib Live Wallpaper"
+      MACOSX_BUNDLE_GUI_IDENTIFIER "com.rlp.${example_name}"
+      MACOSX_BUNDLE_BUNDLE_NAME "Raylib Live Wallpaper Demo"
       MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
       MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
       MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/Info.plist.in"
     )
-  endif() 
+  endif()
+
+  # Optional: install the demo for packagers and CI artifacts
+  install(TARGETS ${example_name}
+    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+    BUNDLE  DESTINATION "."
+  )
 endfunction()
 
+# Source path is relative to this CMakeLists file
 add_example(rlp_demo "examples/demo/main.cpp")

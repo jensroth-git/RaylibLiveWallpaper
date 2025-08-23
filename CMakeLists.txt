@@ -50,7 +50,7 @@ target_include_directories(RaylibLiveWallpaper
 # Platform links
 if(WIN32)
   target_compile_definitions(RaylibLiveWallpaper PUBLIC RLP_PLATFORM_WINDOWS)
-  target_link_libraries(RaylibLiveWallpaper PUBLIC user32 gdi32 shcore shlwapi dwmapi)
+  target_link_libraries(RaylibLiveWallpaper PRIVATE user32 gdi32 shcore shlwapi dwmapi)
 elseif(APPLE)
   target_compile_definitions(RaylibLiveWallpaper PUBLIC RLP_PLATFORM_MACOS)
 
@@ -60,7 +60,7 @@ elseif(APPLE)
   find_library(OPENGL_LIBRARY OpenGL)
   find_library(CARBON_LIBRARY Carbon)
   
-  target_link_libraries(RaylibLiveWallpaper PUBLIC
+  target_link_libraries(RaylibLiveWallpaper PRIVATE
       ${COCOA_LIBRARY}
       ${IOKIT_LIBRARY}
       ${COREVIDEO_LIBRARY}
@@ -72,7 +72,7 @@ elseif(UNIX)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(XRANDR REQUIRED xrandr)
 
-    target_link_libraries(RaylibLiveWallpaper PUBLIC
+    target_link_libraries(RaylibLiveWallpaper PRIVATE
         ${X11_LIBRARIES}
         ${XRANDR_LIBRARIES}
     )
